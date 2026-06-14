@@ -6,9 +6,49 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="ScreenSnap settings">
+    Title="ScreenSnap">
 
-    <Grid x:Name="RootGrid" Padding="16" RowSpacing="12" ColumnSpacing="16">
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom title bar (matches the 32-px standard title bar described in the
+             Windows app title bar design guidance). LeftPaddingColumn / RightPaddingColumn
+             are sized in code to match AppWindowTitleBar.{Left,Right}Inset so the icon
+             and caption never overlap the system caption buttons. -->
+        <Grid x:Name="AppTitleBar"
+              Grid.Row="0"
+              Height="32"
+              Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="LeftPaddingColumn" Width="0" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="RightPaddingColumn" Width="0" />
+            </Grid.ColumnDefinitions>
+
+            <ImageIcon x:Name="AppTitleBarIcon"
+                       Grid.Column="1"
+                       Width="16"
+                       Height="16"
+                       Margin="16,0,0,0"
+                       VerticalAlignment="Center" />
+
+            <TextBlock x:Name="AppTitleBarText"
+                       Grid.Column="2"
+                       Margin="16,0,0,0"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       TextWrapping="NoWrap"
+                       TextTrimming="CharacterEllipsis"
+                       Text="ScreenSnap" />
+        </Grid>
+
+        <!-- Main content -->
+        <Grid Grid.Row="1" Padding="16,8,16,16" RowSpacing="12" ColumnSpacing="16">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280" />
             <ColumnDefinition Width="*" />
@@ -146,6 +186,7 @@
                 </Button>
                 <Button Content="Save" Click="OnSave" Style="{StaticResource AccentButtonStyle}" />
             </StackPanel>
+        </Grid>
         </Grid>
     </Grid>
 </Window>

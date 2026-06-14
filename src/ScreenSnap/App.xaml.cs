@@ -168,6 +168,10 @@ public partial class App : Application
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
 
+        // Explicitly Show in case the window was previously hidden via the
+        // close-to-tray handler (Activate alone doesn't always un-hide a
+        // window that was hidden through AppWindow.Hide).
+        _settingsWindow.AppWindow.Show();
         _settingsWindow.Activate();
 
         var hwnd = new HWND(WindowNative.GetWindowHandle(_settingsWindow));
@@ -183,7 +187,8 @@ public partial class App : Application
         _tray?.Dispose();
         _tray = null;
 
-        _settingsWindow?.Close();
+        // Bypass the close-to-tray handler so the window actually tears down.
+        _settingsWindow?.ForceClose();
         _settingsWindow = null;
 
         Exit();
