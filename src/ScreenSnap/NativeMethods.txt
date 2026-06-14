@@ -20,9 +20,11 @@ TrackPopupMenuEx
 DestroyMenu
 GetCursorPos
 
-// Tray icon image (stock icon)
+// Tray icon image (custom .ico with stock-icon fallback)
 SHGetStockIconInfo
+LoadImage
 DestroyIcon
+GetSystemMetrics
 
 // Global hotkeys
 RegisterHotKey

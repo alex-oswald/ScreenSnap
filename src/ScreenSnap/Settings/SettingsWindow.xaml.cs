@@ -8,11 +8,16 @@ public sealed partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _viewModel;
 
-    internal SettingsWindow(PresetManager manager, AppSettings settings, Action onHotkeysChanged)
+    internal SettingsWindow(PresetManager manager, AppSettings settings, Action onSettingsChanged)
     {
         InitializeComponent();
-        _viewModel = new SettingsViewModel(manager, settings, onHotkeysChanged);
+        _viewModel = new SettingsViewModel(manager, settings, onSettingsChanged);
         RootGrid.DataContext = _viewModel;
+
+        Title = "ScreenSnap";
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "ScreenSnap.ico");
+        if (File.Exists(iconPath))
+            AppWindow.SetIcon(iconPath);
     }
 
     private void OnAddCurrent(object sender, RoutedEventArgs e) => _viewModel.AddFromCurrent();

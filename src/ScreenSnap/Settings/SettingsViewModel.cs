@@ -13,15 +13,15 @@ internal sealed class SettingsViewModel : ObservableObject
 {
     private readonly PresetManager _manager;
     private readonly AppSettings _settings;
-    private readonly Action _onHotkeysChanged;
+    private readonly Action _onSettingsChanged;
     private PresetViewModel? _selected;
     private string? _statusMessage;
 
-    public SettingsViewModel(PresetManager manager, AppSettings settings, Action onHotkeysChanged)
+    public SettingsViewModel(PresetManager manager, AppSettings settings, Action onSettingsChanged)
     {
         _manager = manager;
         _settings = settings;
-        _onHotkeysChanged = onHotkeysChanged;
+        _onSettingsChanged = onSettingsChanged;
 
         Presets = new ObservableCollection<PresetViewModel>();
         foreach (var preset in manager.Presets)
@@ -111,6 +111,22 @@ internal sealed class SettingsViewModel : ObservableObject
         {
             string chord = DescribeModifiers();
             return $"Hold {chord}, then press + for the next preset or − for the previous one.";
+        }
+    }
+
+    /// <summary>Whether ScreenSnap launches automatically when the user signs in.</summary>
+    public bool RunAtStartup
+    {
+        get => _settings.RunAtStartup;
+        set
+        {
+            if (_settings.RunAtStartup == value)
+                return;
+
+            _settings.RunAtStartup = value;
+            OnPropertyChanged();
+            _onSettingsChanged();
+            StatusMessage = value ? "ScreenSnap will start with Windows." : "Startup entry removed.";
         }
     }
 
@@ -220,7 +236,7 @@ internal sealed class SettingsViewModel : ObservableObject
 
     private void ApplyHotkeys()
     {
-        _onHotkeysChanged();
+        _onSettingsChanged();
         StatusMessage = _settings.HotkeysEnabled
             ? $"Hotkeys enabled ({DescribeModifiers()} + / −)."
             : "Hotkeys disabled.";

@@ -79,6 +79,26 @@ internal sealed class TrayIcon : IDisposable
         _presetNames = names ?? Array.Empty<string>();
     }
 
+    /// <summary>Shows a balloon/toast notification from the tray icon.</summary>
+    public unsafe void ShowBalloon(string title, string message, bool isError = false)
+    {
+        if (!_iconAdded)
+            return;
+
+        var data = new NOTIFYICONDATAW
+        {
+            cbSize = (uint)sizeof(NOTIFYICONDATAW),
+            hWnd = _hwnd,
+            uID = TrayIconId,
+            uFlags = NOTIFY_ICON_DATA_FLAGS.NIF_INFO,
+            dwInfoFlags = isError ? NOTIFY_ICON_INFOTIP_FLAGS.NIIF_ERROR : NOTIFY_ICON_INFOTIP_FLAGS.NIIF_INFO,
+        };
+        data.szInfoTitle = title;
+        data.szInfo = message;
+
+        PInvoke.Shell_NotifyIcon(NOTIFY_ICON_MESSAGE.NIM_MODIFY, in data);
+    }
+
     private unsafe void CreateMessageWindow()
     {
         fixed (char* classNamePtr = WindowClassName)
@@ -113,6 +133,31 @@ internal sealed class TrayIcon : IDisposable
 
     private unsafe HICON LoadTrayIcon()
     {
+        // Prefer the bundled app icon, sized for the notification area (DPI-aware).
+        int cx = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSMICON);
+        int cy = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYSMICON);
+        if (cx <= 0) cx = 16;
+        if (cy <= 0) cy = 16;
+
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "ScreenSnap.ico");
+        if (File.Exists(iconPath))
+        {
+            fixed (char* pathPtr = iconPath)
+            {
+                HANDLE handle = PInvoke.LoadImage(
+                    default,
+                    new PCWSTR(pathPtr),
+                    GDI_IMAGE_TYPE.IMAGE_ICON,
+                    cx,
+                    cy,
+                    IMAGE_FLAGS.LR_LOADFROMFILE);
+
+                if (!handle.IsNull)
+                    return (HICON)handle.Value;
+            }
+        }
+
+        // Fallback: a stock "desktop PC" icon so the tray always has something to show.
         var info = new SHSTOCKICONINFO { cbSize = (uint)sizeof(SHSTOCKICONINFO) };
         HRESULT hr = PInvoke.SHGetStockIconInfo(
             SHSTOCKICONID.SIID_DESKTOPPC,

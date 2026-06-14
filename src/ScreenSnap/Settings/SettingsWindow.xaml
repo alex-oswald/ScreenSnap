@@ -76,6 +76,8 @@
                         <CheckBox Content="Win" IsChecked="{Binding ModWin, Mode=TwoWay}" />
                     </StackPanel>
                     <CheckBox Content="Also bind 1–9 to jump to presets" IsChecked="{Binding EnableJumpHotkeys, Mode=TwoWay}" />
+                    <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,2" />
+                    <CheckBox Content="Start ScreenSnap when I sign in" IsChecked="{Binding RunAtStartup, Mode=TwoWay}" />
                 </StackPanel>
             </Border>
         </Grid>

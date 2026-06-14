@@ -1,5 +1,6 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using ScreenSnap.Core.Abstractions;
 using ScreenSnap.Core.Displays;
 using ScreenSnap.Core.Presets;
 using ScreenSnap.Core.Settings;
@@ -19,6 +20,7 @@ public partial class App : Application
     private DispatcherQueue? _dispatcher;
     private PresetManager? _presetManager;
     private ISettingsStore? _settingsStore;
+    private IAutostartService? _autostart;
     private AppSettings _settings = new();
     private HotkeyManager? _hotkeys;
     private TrayIcon? _tray;
@@ -41,6 +43,9 @@ public partial class App : Application
 
         _settingsStore = new JsonSettingsStore(storage);
         _settings = _settingsStore.Load();
+
+        _autostart = new RegistryAutostartService();
+        ReconcileAutostart();
 
         _tray = new TrayIcon();
         _tray.PresetSelected += OnPresetSelected;
@@ -66,7 +71,9 @@ public partial class App : Application
         _tray.SetPresets(names);
     }
 
-    private void OnPresetSelected(int index)
+    private void OnPresetSelected(int index) => ApplyPresetAt(index);
+
+    private void ApplyPresetAt(int index)
     {
         if (_presetManager is null)
             return;
@@ -75,24 +82,79 @@ public partial class App : Application
         if (index < 0 || index >= presets.Count)
             return;
 
-        _presetManager.Apply(presets[index]);
+        var preset = presets[index];
+        var result = _presetManager.Apply(preset);
+        NotifyApplied(preset.Name, result);
+    }
+
+    private void ApplyNext() => NotifyApplied(_presetManager?.ActivePreset?.Name, _presetManager?.ApplyNext());
+
+    private void ApplyPrevious() => NotifyApplied(_presetManager?.ActivePreset?.Name, _presetManager?.ApplyPrevious());
+
+    private void NotifyApplied(string? presetName, DisplayApplyResult? result)
+    {
+        if (_tray is null || result is null)
+            return;
+
+        if (result.Success)
+        {
+            string name = string.IsNullOrWhiteSpace(presetName) ? "preset" : presetName!;
+            string message = result.MissingMonitors.Count > 0
+                ? $"Switched to \u201c{name}\u201d. Skipped {result.MissingMonitors.Count} disconnected monitor(s)."
+                : $"Switched to \u201c{name}\u201d.";
+            _tray.ShowBalloon("ScreenSnap", message);
+        }
+        else
+        {
+            _tray.ShowBalloon("ScreenSnap", result.Error ?? "Couldn't apply the preset.", isError: true);
+        }
     }
 
     private void OnHotkeyPressed(int hotkeyId) => _hotkeys?.Handle(hotkeyId);
 
     private void ApplyHotkeys()
     {
-        _hotkeys?.Configure(
+        if (_hotkeys is null)
+            return;
+
+        bool registered = _hotkeys.Configure(
             _settings,
-            onNext: () => _presetManager?.ApplyNext(),
-            onPrevious: () => _presetManager?.ApplyPrevious(),
-            onJump: OnPresetSelected);
+            onNext: ApplyNext,
+            onPrevious: ApplyPrevious,
+            onJump: ApplyPresetAt);
+
+        if (_settings.HotkeysEnabled && !registered)
+        {
+            _tray?.ShowBalloon(
+                "ScreenSnap",
+                "Couldn't register the preset hotkeys. Another app may already use that key combination.",
+                isError: true);
+        }
     }
 
-    private void SaveAndApplyHotkeys()
+    private void ReconcileAutostart()
+    {
+        if (_autostart is null)
+            return;
+
+        try
+        {
+            if (_settings.RunAtStartup && !_autostart.IsEnabled)
+                _autostart.Enable();
+            else if (!_settings.RunAtStartup && _autostart.IsEnabled)
+                _autostart.Disable();
+        }
+        catch
+        {
+            // Registry access can be restricted by policy; autostart is best-effort.
+        }
+    }
+
+    private void OnSettingsChanged()
     {
         _settingsStore?.Save(_settings);
         ApplyHotkeys();
+        ReconcileAutostart();
     }
 
     private void ShowSettings()
@@ -102,7 +164,7 @@ public partial class App : Application
 
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_presetManager, _settings, SaveAndApplyHotkeys);
+            _settingsWindow = new SettingsWindow(_presetManager, _settings, OnSettingsChanged);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
 
