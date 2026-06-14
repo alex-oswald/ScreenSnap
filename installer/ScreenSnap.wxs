@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ScreenSnap MSI installer (WiX v6).
+
+  Per-user install (no admin/UAC) under %LocalAppData%\Programs\ScreenSnap.
+  The published, self-contained app folder is harvested wholesale via <Files>.
+
+  Built from the workflow / locally with:
+    wix build installer\ScreenSnap.wxs ^
+      -arch <x64|arm64> ^
+      -d PublishDir=<absolute path to publish folder> ^
+      -d ProductVersion=<x.y.z> ^
+      -o ScreenSnap-<version>-<arch>.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="ScreenSnap"
+    Manufacturer="Alex Oswald"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="0C91F1D9-9559-4050-81D3-738DD0D4704F"
+    Scope="perUser"
+    Compressed="yes"
+    Language="1033">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of ScreenSnap is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Add/Remove Programs metadata -->
+    <Icon Id="ScreenSnapIcon" SourceFile="$(var.PublishDir)\ScreenSnap.exe" />
+    <Property Id="ARPPRODUCTICON" Value="ScreenSnapIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/alex-oswald/ScreenSnap" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!-- Install location: %LocalAppData%\Programs\ScreenSnap -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="ScreenSnap" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Start Menu folder -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppShortcutFolder" Name="ScreenSnap" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="ScreenSnap" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+    <!-- Start Menu shortcut (per-user component, HKCU keypath) -->
+    <Component Id="StartMenuShortcut" Directory="AppShortcutFolder">
+      <Shortcut Id="AppStartMenuShortcut"
+                Name="ScreenSnap"
+                Description="Switch between saved display-configuration presets"
+                Target="[INSTALLFOLDER]ScreenSnap.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="ScreenSnapIcon" />
+      <RemoveFolder Id="RemoveAppShortcutFolder" Directory="AppShortcutFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\ScreenSnap" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+  </Package>
+
+  <!-- Harvest the entire published self-contained app folder. -->
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

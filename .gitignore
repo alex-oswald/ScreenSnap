@@ -27,6 +27,12 @@ BundleArtifacts/
 *.msix
 *.msixbundle
 
+## Installer / release output
+dist/
+out/
+*.msi
+*.wixpdb
+
 ## Rider
 .idea/
 
