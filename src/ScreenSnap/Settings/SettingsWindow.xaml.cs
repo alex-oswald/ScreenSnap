@@ -121,4 +121,10 @@ public sealed partial class SettingsWindow : Window
     private void OnApply(object sender, RoutedEventArgs e) => _viewModel.ApplySelected();
 
     private void OnSave(object sender, RoutedEventArgs e) => _viewModel.Save();
+
+    private async void OnAbout(object sender, RoutedEventArgs e)
+    {
+        var dialog = new AboutDialog { XamlRoot = RootGrid.XamlRoot };
+        await dialog.ShowAsync();
+    }
 }
