@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="ScreenSnap.Settings.AboutDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="About ScreenSnap"
+    CloseButtonText="Close"
+    DefaultButton="Close">
+
+    <StackPanel Spacing="14" Width="360">
+        <StackPanel Orientation="Horizontal" Spacing="14">
+            <Image x:Name="AppIcon"
+                   Width="48"
+                   Height="48"
+                   VerticalAlignment="Top"
+                   Stretch="Uniform"
+                   AutomationProperties.AccessibilityView="Raw" />
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="ScreenSnap" Style="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock x:Name="VersionText" Opacity="0.8" />
+                <TextBlock x:Name="AuthorText" Opacity="0.8" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock x:Name="DescriptionText" TextWrapping="Wrap" Opacity="0.9" />
+
+        <HyperlinkButton x:Name="GitHubLink" Content="View on GitHub" Padding="0" />
+    </StackPanel>
+</ContentDialog>

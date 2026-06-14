@@ -7,6 +7,12 @@ global keyboard shortcut.
 Built for the everyday "desk vs. couch" flip: enable the desk monitors for work, then with one
 click (or a hotkey) disable them and light up the TV for gaming.
 
+<p align="center">
+  <img src="docs/screenshot.png"
+       alt="ScreenSnap settings window: a list of presets on the left and per-monitor enable/primary/resolution/orientation options on the right"
+       width="820" />
+</p>
+
 ## Features
 
 - **Taskbar tray icon** with a right-click menu listing every preset, plus **Settings** and **Exit**.
