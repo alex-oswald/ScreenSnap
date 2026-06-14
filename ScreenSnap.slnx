@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ScreenSnap.Core/ScreenSnap.Core.csproj">
+      <Platform Project="x64" />
+    </Project>
+    <Project Path="src/ScreenSnap/ScreenSnap.csproj" />
+  </Folder>
+</Solution>
