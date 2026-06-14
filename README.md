@@ -40,6 +40,26 @@ reserves it for Search.)
 
 ## Getting started
 
+### Install
+
+Download the latest installer from the [**Releases**](https://github.com/alex-oswald/ScreenSnap/releases)
+page and run it:
+
+| Architecture | File |
+| --- | --- |
+| 64-bit (Intel/AMD) | `ScreenSnap-<version>-x64.msi` |
+| ARM64 | `ScreenSnap-<version>-arm64.msi` |
+
+The installer is **self-contained** — it bundles the .NET and Windows App SDK runtimes, so there's
+nothing else to install. It installs per-user (no admin prompt) under
+`%LocalAppData%\Programs\ScreenSnap` and adds a Start Menu shortcut. To remove it, use
+**Settings → Apps**.
+
+> Not sure which one? Most PCs are x64. Choose arm64 only on ARM devices such as Snapdragon-based
+> Copilot+ PCs or a Surface Pro X.
+
+## Building from source
+
 ### Prerequisites
 
 - Windows 10 version 1809 (build 17763) or later.
@@ -72,6 +92,21 @@ from the tray menu or with **Ctrl + Alt + `+`/`-`**.
 ```powershell
 dotnet test tests\ScreenSnap.Core.Tests\ScreenSnap.Core.Tests.csproj -c Debug -p:Platform=x64
 ```
+
+### Releasing
+
+Releases are built by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow. Pushing
+a `vMAJOR.MINOR.PATCH` tag builds self-contained MSIs for x64 and arm64 and publishes them as a
+GitHub Release:
+
+```powershell
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The MSIs are packaged from `installer/ScreenSnap.wxs` with the [WiX Toolset](https://wixtoolset.org/).
+You can also trigger the workflow manually (**Actions → Release → Run workflow**) to produce test
+artifacts without publishing a release.
 
 ## Where data is stored
 

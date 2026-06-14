@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for a manual test build (e.g. 1.2.3). Manual runs build artifacts only and do not publish a GitHub Release.'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} MSI
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            rid: win-x64
+            platform: x64
+            wixarch: x64
+          - arch: arm64
+            rid: win-arm64
+            platform: ARM64
+            wixarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $raw = $env:GITHUB_REF_NAME -replace '^v', ''
+          } else {
+            $raw = '${{ github.event.inputs.version }}'
+          }
+          # MSI ProductVersion must be numeric major.minor.patch.
+          $core = ($raw -split '[-+]')[0]
+          $parts = @($core -split '\.')
+          while ($parts.Count -lt 3) { $parts += '0' }
+          $core = ($parts[0..2] -join '.')
+          if ($core -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Could not derive a numeric version from '$raw'. Tag releases as vMAJOR.MINOR.PATCH (e.g. v1.2.3)."
+          }
+          "release_version=$raw" >> $env:GITHUB_OUTPUT
+          "msi_version=$core"   >> $env:GITHUB_OUTPUT
+          Write-Host "release_version=$raw  msi_version=$core"
+
+      - name: Publish (self-contained)
+        shell: pwsh
+        run: |
+          dotnet publish src/ScreenSnap/ScreenSnap.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            -p:Platform=${{ matrix.platform }} `
+            --self-contained true `
+            -p:WindowsAppSDKSelfContained=true `
+            -p:WindowsPackageType=None `
+            -p:DebugType=none `
+            -p:DebugSymbols=false `
+            -p:Version=${{ steps.version.outputs.msi_version }} `
+            -o publish/${{ matrix.arch }}
+
+      - name: Install WiX
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 6.0.*
+          "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          $pub = (Resolve-Path "publish/${{ matrix.arch }}").Path
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          wix build installer/ScreenSnap.wxs `
+            -arch ${{ matrix.wixarch }} `
+            -d PublishDir="$pub" `
+            -d ProductVersion=${{ steps.version.outputs.msi_version }} `
+            -o "dist/ScreenSnap-${{ steps.version.outputs.release_version }}-${{ matrix.arch }}.msi"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-${{ matrix.arch }}
+          path: dist/*.msi
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.msi > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ScreenSnap ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.msi
+            dist/SHA256SUMS.txt
