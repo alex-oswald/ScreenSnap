@@ -98,6 +98,7 @@ jobs:
           name: msi-${{ matrix.arch }}
           path: dist/*.msi
           if-no-files-found: error
+          compression-level: 0
 
   release:
     name: Publish GitHub Release
