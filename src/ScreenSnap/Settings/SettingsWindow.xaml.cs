@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using ScreenSnap.Core.Presets;
+using ScreenSnap.Core.Settings;
 
 namespace ScreenSnap.Settings;
 
@@ -7,10 +8,10 @@ public sealed partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _viewModel;
 
-    internal SettingsWindow(PresetManager manager)
+    internal SettingsWindow(PresetManager manager, AppSettings settings, Action onHotkeysChanged)
     {
         InitializeComponent();
-        _viewModel = new SettingsViewModel(manager);
+        _viewModel = new SettingsViewModel(manager, settings, onHotkeysChanged);
         RootGrid.DataContext = _viewModel;
     }
 

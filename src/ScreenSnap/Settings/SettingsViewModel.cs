@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using ScreenSnap.Core.Displays;
 using ScreenSnap.Core.Presets;
+using ScreenSnap.Core.Settings;
 
 namespace ScreenSnap.Settings;
 
@@ -11,12 +12,17 @@ namespace ScreenSnap.Settings;
 internal sealed class SettingsViewModel : ObservableObject
 {
     private readonly PresetManager _manager;
+    private readonly AppSettings _settings;
+    private readonly Action _onHotkeysChanged;
     private PresetViewModel? _selected;
     private string? _statusMessage;
 
-    public SettingsViewModel(PresetManager manager)
+    public SettingsViewModel(PresetManager manager, AppSettings settings, Action onHotkeysChanged)
     {
         _manager = manager;
+        _settings = settings;
+        _onHotkeysChanged = onHotkeysChanged;
+
         Presets = new ObservableCollection<PresetViewModel>();
         foreach (var preset in manager.Presets)
             Presets.Add(new PresetViewModel(preset));
@@ -42,6 +48,70 @@ internal sealed class SettingsViewModel : ObservableObject
     {
         get => _statusMessage;
         private set => SetField(ref _statusMessage, value);
+    }
+
+    // --- Hotkey configuration ---------------------------------------------------------
+
+    public bool HotkeysEnabled
+    {
+        get => _settings.HotkeysEnabled;
+        set
+        {
+            if (_settings.HotkeysEnabled == value)
+                return;
+
+            _settings.HotkeysEnabled = value;
+            OnPropertyChanged();
+            ApplyHotkeys();
+        }
+    }
+
+    public bool ModControl
+    {
+        get => _settings.Modifiers.HasFlag(HotkeyModifiers.Control);
+        set => SetModifier(HotkeyModifiers.Control, value);
+    }
+
+    public bool ModAlt
+    {
+        get => _settings.Modifiers.HasFlag(HotkeyModifiers.Alt);
+        set => SetModifier(HotkeyModifiers.Alt, value);
+    }
+
+    public bool ModShift
+    {
+        get => _settings.Modifiers.HasFlag(HotkeyModifiers.Shift);
+        set => SetModifier(HotkeyModifiers.Shift, value);
+    }
+
+    public bool ModWin
+    {
+        get => _settings.Modifiers.HasFlag(HotkeyModifiers.Win);
+        set => SetModifier(HotkeyModifiers.Win, value);
+    }
+
+    public bool EnableJumpHotkeys
+    {
+        get => _settings.EnableJumpHotkeys;
+        set
+        {
+            if (_settings.EnableJumpHotkeys == value)
+                return;
+
+            _settings.EnableJumpHotkeys = value;
+            OnPropertyChanged();
+            ApplyHotkeys();
+        }
+    }
+
+    /// <summary>Human-readable summary of the current chord, e.g. "Hold Ctrl+Alt, then press + …".</summary>
+    public string HotkeyHint
+    {
+        get
+        {
+            string chord = DescribeModifiers();
+            return $"Hold {chord}, then press + for the next preset or − for the previous one.";
+        }
     }
 
     /// <summary>Captures the current desktop layout as a new preset.</summary>
@@ -119,5 +189,55 @@ internal sealed class SettingsViewModel : ObservableObject
 
         _manager.Persist();
         StatusMessage = "Saved.";
+    }
+
+    private void SetModifier(HotkeyModifiers flag, bool enabled)
+    {
+        HotkeyModifiers current = _settings.Modifiers;
+        HotkeyModifiers updated = enabled ? current | flag : current & ~flag;
+        if (updated == current)
+            return;
+
+        if (updated == HotkeyModifiers.None)
+        {
+            // Refuse a modifier-less chord so we never grab a bare +/- globally.
+            StatusMessage = "Keep at least one modifier for the hotkey.";
+            OnPropertyChanged(nameof(ModControl));
+            OnPropertyChanged(nameof(ModAlt));
+            OnPropertyChanged(nameof(ModShift));
+            OnPropertyChanged(nameof(ModWin));
+            return;
+        }
+
+        _settings.Modifiers = updated;
+        OnPropertyChanged(nameof(ModControl));
+        OnPropertyChanged(nameof(ModAlt));
+        OnPropertyChanged(nameof(ModShift));
+        OnPropertyChanged(nameof(ModWin));
+        OnPropertyChanged(nameof(HotkeyHint));
+        ApplyHotkeys();
+    }
+
+    private void ApplyHotkeys()
+    {
+        _onHotkeysChanged();
+        StatusMessage = _settings.HotkeysEnabled
+            ? $"Hotkeys enabled ({DescribeModifiers()} + / −)."
+            : "Hotkeys disabled.";
+    }
+
+    private string DescribeModifiers()
+    {
+        var parts = new List<string>();
+        if (ModControl)
+            parts.Add("Ctrl");
+        if (ModAlt)
+            parts.Add("Alt");
+        if (ModShift)
+            parts.Add("Shift");
+        if (ModWin)
+            parts.Add("Win");
+
+        return parts.Count == 0 ? "(no modifier)" : string.Join("+", parts);
     }
 }

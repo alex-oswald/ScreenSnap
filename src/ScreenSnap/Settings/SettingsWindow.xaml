@@ -24,6 +24,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0" Text="Presets" Style="{StaticResource SubtitleTextBlockStyle}" />
@@ -58,6 +59,25 @@
                     <FontIcon Glyph="&#xE70D;" FontSize="14" />
                 </Button>
             </StackPanel>
+
+            <Border Grid.Row="3"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12">
+                <StackPanel Spacing="8">
+                    <ToggleSwitch Header="Global hotkeys" IsOn="{Binding HotkeysEnabled, Mode=TwoWay}" />
+                    <TextBlock Text="{Binding HotkeyHint}" TextWrapping="Wrap" Opacity="0.7" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <CheckBox Content="Ctrl" IsChecked="{Binding ModControl, Mode=TwoWay}" />
+                        <CheckBox Content="Alt" IsChecked="{Binding ModAlt, Mode=TwoWay}" />
+                        <CheckBox Content="Shift" IsChecked="{Binding ModShift, Mode=TwoWay}" />
+                        <CheckBox Content="Win" IsChecked="{Binding ModWin, Mode=TwoWay}" />
+                    </StackPanel>
+                    <CheckBox Content="Also bind 1–9 to jump to presets" IsChecked="{Binding EnableJumpHotkeys, Mode=TwoWay}" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <!-- Right: editor for the selected preset -->
