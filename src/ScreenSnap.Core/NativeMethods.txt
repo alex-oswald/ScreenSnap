@@ -1,0 +1,17 @@
+// Connecting and Configuring Displays (CCD) API
+GetDisplayConfigBufferSizes
+QueryDisplayConfig
+SetDisplayConfig
+DisplayConfigGetDeviceInfo
+
+// Struct/enum surface we reference directly
+DISPLAYCONFIG_PATH_INFO
+DISPLAYCONFIG_MODE_INFO
+DISPLAYCONFIG_TARGET_DEVICE_NAME
+DISPLAYCONFIG_SOURCE_DEVICE_NAME
+DISPLAYCONFIG_DEVICE_INFO_TYPE
+DISPLAYCONFIG_PATH_ACTIVE
+
+// Query/Set flags (full enums)
+QUERY_DISPLAY_CONFIG_FLAGS
+SET_DISPLAY_CONFIG_FLAGS
