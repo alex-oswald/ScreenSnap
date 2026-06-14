@@ -1,2 +1,29 @@
+// Bring a window to the foreground (single-instance activation)
 SetForegroundWindow
 ShowWindow
+
+// Tray icon + hidden message window
+Shell_NotifyIcon
+NOTIFYICONDATAW
+RegisterClassEx
+CreateWindowEx
+DefWindowProc
+DestroyWindow
+RegisterWindowMessage
+WNDCLASSEXW
+WNDPROC
+
+// Tray context menu (native popup)
+CreatePopupMenu
+AppendMenu
+TrackPopupMenuEx
+DestroyMenu
+GetCursorPos
+
+// Tray icon image (stock icon)
+SHGetStockIconInfo
+DestroyIcon
+
+// Global hotkeys
+RegisterHotKey
+UnregisterHotKey
