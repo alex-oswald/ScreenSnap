@@ -12,4 +12,7 @@ public interface IStorageLocations
 
     /// <summary>Full path to the JSON file that stores the user's presets.</summary>
     string PresetsFilePath { get; }
+
+    /// <summary>Full path to the JSON file that stores app settings (hotkeys, autostart).</summary>
+    string SettingsFilePath { get; }
 }
