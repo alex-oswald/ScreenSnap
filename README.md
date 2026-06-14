@@ -50,7 +50,7 @@ reserves it for Search.)
 
 ```powershell
 # from the repository root
-dotnet build ScreenSnap.slnx -c Debug -p:Platform=x64
+dotnet build ScreenSnap.slnx -c Debug
 ```
 
 The executable is produced at

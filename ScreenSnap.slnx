@@ -3,7 +3,9 @@
     <Project Path="src/ScreenSnap.Core/ScreenSnap.Core.csproj">
       <Platform Project="x64" />
     </Project>
-    <Project Path="src/ScreenSnap/ScreenSnap.csproj" />
+    <Project Path="src/ScreenSnap/ScreenSnap.csproj">
+      <Platform Project="x64" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ScreenSnap.Core.Tests/ScreenSnap.Core.Tests.csproj">
