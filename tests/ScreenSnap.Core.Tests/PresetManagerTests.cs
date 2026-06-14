@@ -30,6 +30,8 @@ public class PresetManagerTests
 
         public IReadOnlyList<MonitorInfo> GetMonitors() => Array.Empty<MonitorInfo>();
 
+        public IReadOnlyList<DisplayMode> GetAvailableModes(string devicePath) => Array.Empty<DisplayMode>();
+
         public DisplayConfiguration CaptureCurrent() => new()
         {
             Monitors = { new MonitorState { DevicePath = "captured", FriendlyName = "Captured", Enabled = true, IsPrimary = true } },

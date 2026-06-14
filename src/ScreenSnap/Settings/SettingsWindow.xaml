@@ -101,7 +101,7 @@
 
                 <TextBlock TextWrapping="Wrap"
                            Opacity="0.7"
-                           Text="Turn a monitor off to disable it in this preset. Mark one monitor as primary. Width/Height of 0 keeps each monitor's current resolution." />
+                           Text="Turn a monitor off to disable it in this preset, and mark one monitor as primary. Choose each monitor's resolution and orientation; leave resolution on &quot;Use current resolution&quot; to keep whatever it is already using." />
 
                 <ItemsControl ItemsSource="{Binding Monitors}">
                     <ItemsControl.ItemTemplate>
@@ -119,14 +119,12 @@
                                         <ToggleSwitch Header="Primary" IsOn="{Binding IsPrimary, Mode=TwoWay}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                        <NumberBox Header="X" Width="110" Value="{Binding X, Mode=TwoWay}"
-                                                   SpinButtonPlacementMode="Compact" />
-                                        <NumberBox Header="Y" Width="110" Value="{Binding Y, Mode=TwoWay}"
-                                                   SpinButtonPlacementMode="Compact" />
-                                        <NumberBox Header="Width" Width="120" Value="{Binding Width, Mode=TwoWay}"
-                                                   Minimum="0" SpinButtonPlacementMode="Compact" />
-                                        <NumberBox Header="Height" Width="120" Value="{Binding Height, Mode=TwoWay}"
-                                                   Minimum="0" SpinButtonPlacementMode="Compact" />
+                                        <ComboBox Header="Resolution" Width="190"
+                                                  ItemsSource="{Binding Resolutions}"
+                                                  SelectedItem="{Binding SelectedResolution, Mode=TwoWay}" />
+                                        <ComboBox Header="Orientation" Width="190"
+                                                  ItemsSource="{Binding Orientations}"
+                                                  SelectedItem="{Binding SelectedOrientation, Mode=TwoWay}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

@@ -23,6 +23,7 @@ public class DisplayConfigurationSerializationTests
                     FriendlyName = "DELL U2720Q",
                     Enabled = true,
                     IsPrimary = true,
+                    Orientation = DisplayOrientation.Portrait,
                     X = 0,
                     Y = 0,
                     Width = 3840,
@@ -34,6 +35,7 @@ public class DisplayConfigurationSerializationTests
                     FriendlyName = "LG TV",
                     Enabled = false,
                     IsPrimary = false,
+                    Orientation = DisplayOrientation.Landscape,
                     X = 3840,
                     Y = 0,
                     Width = 0,
@@ -57,6 +59,7 @@ public class DisplayConfigurationSerializationTests
             Assert.Equal(expected.FriendlyName, actual.FriendlyName);
             Assert.Equal(expected.Enabled, actual.Enabled);
             Assert.Equal(expected.IsPrimary, actual.IsPrimary);
+            Assert.Equal(expected.Orientation, actual.Orientation);
             Assert.Equal(expected.X, actual.X);
             Assert.Equal(expected.Y, actual.Y);
             Assert.Equal(expected.Width, actual.Width);
@@ -71,5 +74,22 @@ public class DisplayConfigurationSerializationTests
 
         Assert.NotNull(configuration.Monitors);
         Assert.Empty(configuration.Monitors);
+    }
+
+    [Fact]
+    public void MonitorState_DefaultsToLandscapeOrientation()
+    {
+        Assert.Equal(DisplayOrientation.Landscape, new MonitorState().Orientation);
+    }
+
+    [Theory]
+    [InlineData(0u, 0u, "Use current resolution")]
+    [InlineData(1920u, 1080u, "1920 \u00d7 1080")]
+    public void DisplayMode_FormatsForDisplay(uint width, uint height, string expected)
+    {
+        var mode = new DisplayMode(width, height);
+
+        Assert.Equal(width == 0 || height == 0, mode.IsUseCurrent);
+        Assert.Equal(expected, mode.ToString());
     }
 }

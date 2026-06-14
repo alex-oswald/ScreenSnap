@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using ScreenSnap.Core.Displays;
 using ScreenSnap.Core.Presets;
 
 namespace ScreenSnap.Settings;
@@ -6,11 +7,13 @@ namespace ScreenSnap.Settings;
 /// <summary>Editable view of a <see cref="Preset"/> and its monitors.</summary>
 internal sealed class PresetViewModel : ObservableObject
 {
+    private readonly IDisplayService _display;
     private string _name;
 
-    public PresetViewModel(Preset model)
+    public PresetViewModel(Preset model, IDisplayService display)
     {
         Model = model;
+        _display = display;
         _name = model.Name;
         Monitors = new ObservableCollection<MonitorRowViewModel>();
         RebuildMonitors();
@@ -39,7 +42,8 @@ internal sealed class PresetViewModel : ObservableObject
         Monitors.Clear();
         foreach (var monitor in Model.Configuration.Monitors)
         {
-            Monitors.Add(new MonitorRowViewModel(monitor) { PrimarySelected = OnPrimarySelected });
+            var modes = _display.GetAvailableModes(monitor.DevicePath);
+            Monitors.Add(new MonitorRowViewModel(monitor, modes) { PrimarySelected = OnPrimarySelected });
         }
     }
 

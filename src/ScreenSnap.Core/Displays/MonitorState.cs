@@ -18,15 +18,18 @@ public sealed class MonitorState
     /// <summary>Whether the monitor should be the primary display for this preset.</summary>
     public bool IsPrimary { get; set; }
 
+    /// <summary>Desired orientation/rotation of the monitor for this preset.</summary>
+    public DisplayOrientation Orientation { get; set; } = DisplayOrientation.Landscape;
+
     /// <summary>Desired X position of the monitor's top-left corner in desktop coordinates.</summary>
     public int X { get; set; }
 
     /// <summary>Desired Y position of the monitor's top-left corner in desktop coordinates.</summary>
     public int Y { get; set; }
 
-    /// <summary>Desired horizontal resolution in pixels (0 = use the monitor's current/preferred mode).</summary>
+    /// <summary>Desired native (un-rotated) horizontal resolution in pixels (0 = keep current).</summary>
     public uint Width { get; set; }
 
-    /// <summary>Desired vertical resolution in pixels (0 = use the monitor's current/preferred mode).</summary>
+    /// <summary>Desired native (un-rotated) vertical resolution in pixels (0 = keep current).</summary>
     public uint Height { get; set; }
 }

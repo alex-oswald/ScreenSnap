@@ -11,7 +11,7 @@ click (or a hotkey) disable them and light up the TV for gaming.
 
 - **Taskbar tray icon** with a right-click menu listing every preset, plus **Settings** and **Exit**.
 - **Per-monitor presets** — each preset records, for every attached display, whether it's enabled,
-  which one is primary, and its position/size in the virtual desktop.
+  which one is primary, its resolution, and its orientation.
 - **Global hotkeys** — cycle presets without leaving your game or app:
   **Ctrl + Alt + `+`** for the next preset, **Ctrl + Alt + `-`** for the previous one
   (main-row and numpad keys both work). The modifier chord is configurable; an optional
@@ -29,8 +29,9 @@ click (or a hotkey) disable them and light up the TV for gaming.
 
 The display engine uses the Windows **Connecting and Configuring Displays (CCD)** APIs
 (`QueryDisplayConfig` / `SetDisplayConfig`) to enable/disable specific displays, set the primary
-monitor, and position extended displays. Monitors are identified by their stable device path so
-presets keep working across reconnects and reboots.
+monitor, set each display's resolution and orientation, and position extended displays. The list
+of selectable resolutions per monitor comes from `EnumDisplaySettingsEx`. Monitors are identified
+by their stable device path so presets keep working across reconnects and reboots.
 
 The tray icon is a classic `Shell_NotifyIcon` on a hidden message-only window, and global hotkeys
 are registered with `RegisterHotKey` on that same window — no global keyboard hook, so it coexists

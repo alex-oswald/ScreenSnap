@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using ScreenSnap.Core.Displays;
 
 namespace ScreenSnap.Settings;
@@ -11,21 +13,21 @@ internal sealed class MonitorRowViewModel : ObservableObject
     private readonly MonitorState _model;
     private bool _enabled;
     private bool _isPrimary;
-    private double _x;
-    private double _y;
-    private double _width;
-    private double _height;
+    private ResolutionChoice _selectedResolution;
+    private OrientationChoice _selectedOrientation;
 
-    public MonitorRowViewModel(MonitorState model)
+    public MonitorRowViewModel(MonitorState model, IReadOnlyList<DisplayMode> availableModes)
     {
         _model = model;
         FriendlyName = string.IsNullOrWhiteSpace(model.FriendlyName) ? model.DevicePath : model.FriendlyName;
         _enabled = model.Enabled;
         _isPrimary = model.IsPrimary;
-        _x = model.X;
-        _y = model.Y;
-        _width = model.Width;
-        _height = model.Height;
+
+        Resolutions = BuildResolutions(model, availableModes);
+        _selectedResolution = Resolutions.FirstOrDefault(r => r.Width == model.Width && r.Height == model.Height)
+            ?? Resolutions[0];
+        _selectedOrientation = Orientations.FirstOrDefault(o => o.Value == model.Orientation)
+            ?? Orientations[0];
     }
 
     /// <summary>Invoked when this monitor becomes primary, so the parent can clear the others.</summary>
@@ -34,6 +36,10 @@ internal sealed class MonitorRowViewModel : ObservableObject
     public string FriendlyName { get; }
 
     public string DevicePath => _model.DevicePath;
+
+    public IReadOnlyList<ResolutionChoice> Resolutions { get; }
+
+    public IReadOnlyList<OrientationChoice> Orientations { get; } = OrientationChoice.All;
 
     public bool Enabled
     {
@@ -58,26 +64,43 @@ internal sealed class MonitorRowViewModel : ObservableObject
         }
     }
 
-    public double X { get => _x; set => SetField(ref _x, value); }
+    public ResolutionChoice SelectedResolution
+    {
+        get => _selectedResolution;
+        set => SetField(ref _selectedResolution, value);
+    }
 
-    public double Y { get => _y; set => SetField(ref _y, value); }
-
-    public double Width { get => _width; set => SetField(ref _width, value); }
-
-    public double Height { get => _height; set => SetField(ref _height, value); }
+    public OrientationChoice SelectedOrientation
+    {
+        get => _selectedOrientation;
+        set => SetField(ref _selectedOrientation, value);
+    }
 
     /// <summary>Writes the buffered values back into the underlying model.</summary>
     public void Commit()
     {
         _model.Enabled = _enabled;
         _model.IsPrimary = _isPrimary;
-        _model.X = ToInt(_x);
-        _model.Y = ToInt(_y);
-        _model.Width = ToUInt(_width);
-        _model.Height = ToUInt(_height);
+        _model.Width = _selectedResolution.Width;
+        _model.Height = _selectedResolution.Height;
+        _model.Orientation = _selectedOrientation.Value;
+        // X/Y are left untouched: the desktop arrangement is captured automatically, not edited here.
     }
 
-    private static int ToInt(double value) => double.IsNaN(value) ? 0 : (int)Math.Round(value);
+    private static IReadOnlyList<ResolutionChoice> BuildResolutions(
+        MonitorState model, IReadOnlyList<DisplayMode> availableModes)
+    {
+        var list = new List<ResolutionChoice> { new(0, 0) };
+        list.AddRange(availableModes.Where(m => !m.IsUseCurrent).Select(m => new ResolutionChoice(m.Width, m.Height)));
 
-    private static uint ToUInt(double value) => double.IsNaN(value) || value < 0 ? 0u : (uint)Math.Round(value);
+        // Make sure the preset's stored resolution is always selectable, even if the monitor is
+        // currently disconnected (so its modes can't be enumerated).
+        if (model.Width != 0 && model.Height != 0 &&
+            !list.Any(r => r.Width == model.Width && r.Height == model.Height))
+        {
+            list.Add(new ResolutionChoice(model.Width, model.Height));
+        }
+
+        return list;
+    }
 }

@@ -25,7 +25,7 @@ internal sealed class SettingsViewModel : ObservableObject
 
         Presets = new ObservableCollection<PresetViewModel>();
         foreach (var preset in manager.Presets)
-            Presets.Add(new PresetViewModel(preset));
+            Presets.Add(new PresetViewModel(preset, manager.Display));
 
         _selected = Presets.FirstOrDefault();
     }
@@ -134,7 +134,7 @@ internal sealed class SettingsViewModel : ObservableObject
     public void AddFromCurrent()
     {
         var preset = _manager.CaptureNew("New preset");
-        var vm = new PresetViewModel(preset);
+        var vm = new PresetViewModel(preset, _manager.Display);
         Presets.Add(vm);
         Selected = vm;
         StatusMessage = "Captured the current layout as a new preset.";

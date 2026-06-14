@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Windows.Win32;
 using Windows.Win32.Devices.Display;
 using Windows.Win32.Foundation;
+using Windows.Win32.Graphics.Gdi;
 using static Windows.Win32.PInvoke;
 
 namespace ScreenSnap.Core.Displays;
@@ -33,9 +34,12 @@ public sealed class CcdDisplayService : IDisplayService
             int x = 0, y = 0;
             uint width = 0, height = 0;
             bool primary = false;
+            var orientation = DisplayOrientation.Landscape;
 
             if (active)
             {
+                orientation = FromRotation(path.targetInfo.rotation);
+
                 uint idx = path.sourceInfo.Anonymous.modeInfoIdx;
                 if (idx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID && idx < (uint)modes.Length &&
                     modes[idx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE.DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE)
@@ -43,8 +47,10 @@ public sealed class CcdDisplayService : IDisplayService
                     var sourceMode = modes[idx].Anonymous.sourceMode;
                     x = sourceMode.position.x;
                     y = sourceMode.position.y;
-                    width = sourceMode.width;
-                    height = sourceMode.height;
+                    // The source surface is already rotated; report the native (landscape) resolution.
+                    (width, height) = IsPortrait(orientation)
+                        ? (sourceMode.height, sourceMode.width)
+                        : (sourceMode.width, sourceMode.height);
                     primary = x == 0 && y == 0;
                 }
             }
@@ -58,6 +64,7 @@ public sealed class CcdDisplayService : IDisplayService
                     FriendlyName = string.IsNullOrWhiteSpace(friendly) ? "Display" : friendly,
                     IsActive = active,
                     IsPrimary = primary,
+                    Orientation = orientation,
                     X = x,
                     Y = y,
                     Width = width,
@@ -74,6 +81,19 @@ public sealed class CcdDisplayService : IDisplayService
     }
 
     /// <inheritdoc />
+    public IReadOnlyList<DisplayMode> GetAvailableModes(string devicePath)
+    {
+        if (string.IsNullOrEmpty(devicePath))
+            return Array.Empty<DisplayMode>();
+
+        string gdiName = GetSourceGdiName(devicePath);
+        if (string.IsNullOrEmpty(gdiName))
+            return Array.Empty<DisplayMode>();
+
+        return EnumerateModes(gdiName);
+    }
+
+    /// <inheritdoc />
     public DisplayConfiguration CaptureCurrent()
     {
         var configuration = new DisplayConfiguration();
@@ -85,6 +105,7 @@ public sealed class CcdDisplayService : IDisplayService
                 FriendlyName = monitor.FriendlyName,
                 Enabled = monitor.IsActive,
                 IsPrimary = monitor.IsPrimary,
+                Orientation = monitor.Orientation,
                 X = monitor.X,
                 Y = monitor.Y,
                 Width = monitor.Width,
@@ -204,21 +225,33 @@ public sealed class CcdDisplayService : IDisplayService
                 liveSourceIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID && liveSourceIdx < (uint)modes.Length &&
                 modes[liveSourceIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE.DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE;
 
-            uint width = monitor.Width;
-            uint height = monitor.Height;
-            if (reuseLiveTargetModes && haveLiveSource)
-            {
-                // Keep the live resolution so the supplied source and target modes stay consistent.
-                var liveSource = modes[liveSourceIdx].Anonymous.sourceMode;
-                width = liveSource.width;
-                height = liveSource.height;
-            }
-            else if ((width == 0 || height == 0) && haveLiveSource)
+            // Resolve the live native (un-rotated) resolution and rotation when the monitor is active.
+            var liveRotation = wasActive
+                ? path.targetInfo.rotation
+                : DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_IDENTITY;
+            uint liveNativeW = 0, liveNativeH = 0;
+            if (haveLiveSource)
             {
                 var liveSource = modes[liveSourceIdx].Anonymous.sourceMode;
-                width = liveSource.width;
-                height = liveSource.height;
+                (liveNativeW, liveNativeH) = IsPortrait(liveRotation)
+                    ? (liveSource.height, liveSource.width)
+                    : (liveSource.width, liveSource.height);
             }
+
+            // Resolve the requested rotation and native resolution (falling back to the live values).
+            var reqRotation = ToRotation(monitor.Orientation);
+            uint reqNativeW = monitor.Width != 0 ? monitor.Width : liveNativeW;
+            uint reqNativeH = monitor.Height != 0 ? monitor.Height : liveNativeH;
+
+            // The desktop source surface is sized in rotated pixels for portrait orientations.
+            (uint desktopW, uint desktopH) = IsPortrait(reqRotation)
+                ? (reqNativeH, reqNativeW)
+                : (reqNativeW, reqNativeH);
+
+            bool noChange = haveLiveSource &&
+                reqRotation == liveRotation &&
+                reqNativeW == liveNativeW &&
+                reqNativeH == liveNativeH;
 
             // Build the source mode that fixes this display's position and size.
             var sourceMode = new DISPLAYCONFIG_MODE_INFO
@@ -229,8 +262,8 @@ public sealed class CcdDisplayService : IDisplayService
             };
             sourceMode.Anonymous.sourceMode = new DISPLAYCONFIG_SOURCE_MODE
             {
-                width = width,
-                height = height,
+                width = desktopW,
+                height = desktopH,
                 pixelFormat = DISPLAYCONFIG_PIXELFORMAT.DISPLAYCONFIG_PIXELFORMAT_32BPP,
                 position = new POINTL { x = monitor.X - originX, y = monitor.Y - originY },
             };
@@ -240,8 +273,12 @@ public sealed class CcdDisplayService : IDisplayService
 
             path.flags |= DISPLAYCONFIG_PATH_ACTIVE;
             path.sourceInfo.Anonymous.modeInfoIdx = (uint)sourceModeIndex;
+            path.targetInfo.rotation = reqRotation;
 
-            if (reuseLiveTargetModes && wasActive &&
+            // Only reuse the live target mode (which preserves the exact refresh rate) when neither
+            // the resolution nor the orientation is changing; otherwise let the OS compute one that
+            // matches the supplied source mode.
+            if (reuseLiveTargetModes && wasActive && noChange &&
                 liveTargetIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID && liveTargetIdx < (uint)modes.Length &&
                 modes[liveTargetIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE.DISPLAYCONFIG_MODE_INFO_TYPE_TARGET)
             {
@@ -251,7 +288,6 @@ public sealed class CcdDisplayService : IDisplayService
             }
             else
             {
-                // Let the OS pick a target mode that matches the supplied source mode.
                 path.targetInfo.Anonymous.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
             }
 
@@ -320,4 +356,74 @@ public sealed class CcdDisplayService : IDisplayService
         friendlyName = request.monitorFriendlyDeviceName.ToString();
         return request.monitorDevicePath.ToString();
     }
+
+    private static unsafe string GetSourceGdiName(string devicePath)
+    {
+        var (paths, _) = Query(QUERY_DISPLAY_CONFIG_FLAGS.QDC_ALL_PATHS);
+        foreach (var path in paths)
+        {
+            string candidate = GetDevicePath(path.targetInfo.adapterId, path.targetInfo.id, out _);
+            if (!string.Equals(candidate, devicePath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var request = new DISPLAYCONFIG_SOURCE_DEVICE_NAME();
+            request.header.type = DISPLAYCONFIG_DEVICE_INFO_TYPE.DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+            request.header.size = (uint)sizeof(DISPLAYCONFIG_SOURCE_DEVICE_NAME);
+            request.header.adapterId = path.sourceInfo.adapterId;
+            request.header.id = path.sourceInfo.id;
+
+            if (DisplayConfigGetDeviceInfo((DISPLAYCONFIG_DEVICE_INFO_HEADER*)&request) == 0)
+                return request.viewGdiDeviceName.ToString();
+        }
+
+        return string.Empty;
+    }
+
+    private static unsafe IReadOnlyList<DisplayMode> EnumerateModes(string gdiDeviceName)
+    {
+        var seen = new HashSet<(uint, uint)>();
+        var result = new List<DisplayMode>();
+
+        var dm = new DEVMODEW();
+        for (uint i = 0; ; i++)
+        {
+            dm.dmSize = (ushort)sizeof(DEVMODEW);
+            // dwFlags = 0 returns each supported mode in the display's default (landscape) orientation.
+            if (!EnumDisplaySettingsEx(gdiDeviceName, (ENUM_DISPLAY_SETTINGS_MODE)i, ref dm, 0))
+                break;
+
+            uint w = dm.dmPelsWidth;
+            uint h = dm.dmPelsHeight;
+            if (w == 0 || h == 0)
+                continue;
+
+            if (seen.Add((w, h)))
+                result.Add(new DisplayMode(w, h));
+        }
+
+        result.Sort((a, b) => b.Width != a.Width ? b.Width.CompareTo(a.Width) : b.Height.CompareTo(a.Height));
+        return result;
+    }
+
+    private static DISPLAYCONFIG_ROTATION ToRotation(DisplayOrientation orientation) => orientation switch
+    {
+        DisplayOrientation.Portrait => DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE90,
+        DisplayOrientation.LandscapeFlipped => DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE180,
+        DisplayOrientation.PortraitFlipped => DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE270,
+        _ => DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_IDENTITY,
+    };
+
+    private static DisplayOrientation FromRotation(DISPLAYCONFIG_ROTATION rotation) => rotation switch
+    {
+        DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE90 => DisplayOrientation.Portrait,
+        DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE180 => DisplayOrientation.LandscapeFlipped,
+        DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE270 => DisplayOrientation.PortraitFlipped,
+        _ => DisplayOrientation.Landscape,
+    };
+
+    private static bool IsPortrait(DisplayOrientation orientation) => ((int)orientation & 1) == 1;
+
+    private static bool IsPortrait(DISPLAYCONFIG_ROTATION rotation) =>
+        rotation is DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE90
+                 or DISPLAYCONFIG_ROTATION.DISPLAYCONFIG_ROTATION_ROTATE270;
 }
