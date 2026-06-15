@@ -72,6 +72,12 @@
             <ListView Grid.Row="1"
                       ItemsSource="{Binding Presets}"
                       SelectedItem="{Binding Selected, Mode=TwoWay}"
+                      SelectionMode="Single"
+                      CanDragItems="True"
+                      CanReorderItems="True"
+                      AllowDrop="True"
+                      DragItemsStarting="OnPresetsDragItemsStarting"
+                      DragItemsCompleted="OnPresetsDragItemsCompleted"
                       BorderThickness="1"
                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                       CornerRadius="6">
@@ -91,12 +97,6 @@
                 </Button>
                 <Button Click="OnDelete" ToolTipService.ToolTip="Delete the selected preset">
                     <FontIcon Glyph="&#xE74D;" FontSize="14" />
-                </Button>
-                <Button Click="OnMoveUp" ToolTipService.ToolTip="Move up">
-                    <FontIcon Glyph="&#xE70E;" FontSize="14" />
-                </Button>
-                <Button Click="OnMoveDown" ToolTipService.ToolTip="Move down">
-                    <FontIcon Glyph="&#xE70D;" FontSize="14" />
                 </Button>
             </StackPanel>
 
