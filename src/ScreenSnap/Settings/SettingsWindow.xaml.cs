@@ -11,12 +11,14 @@ namespace ScreenSnap.Settings;
 public sealed partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _viewModel;
+    private readonly Action _onExitRequested;
     private bool _allowClose;
 
-    internal SettingsWindow(PresetManager manager, AppSettings settings, Action onSettingsChanged)
+    internal SettingsWindow(PresetManager manager, AppSettings settings, Action onSettingsChanged, Action onExitRequested)
     {
         InitializeComponent();
         _viewModel = new SettingsViewModel(manager, settings, onSettingsChanged);
+        _onExitRequested = onExitRequested;
         RootGrid.DataContext = _viewModel;
 
         Title = "ScreenSnap";
@@ -121,6 +123,8 @@ public sealed partial class SettingsWindow : Window
     private void OnApply(object sender, RoutedEventArgs e) => _viewModel.ApplySelected();
 
     private void OnSave(object sender, RoutedEventArgs e) => _viewModel.Save();
+
+    private void OnExit(object sender, RoutedEventArgs e) => _onExitRequested();
 
     private async void OnAbout(object sender, RoutedEventArgs e)
     {

@@ -164,7 +164,7 @@ public partial class App : Application
 
         if (_settingsWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_presetManager, _settings, OnSettingsChanged);
+            _settingsWindow = new SettingsWindow(_presetManager, _settings, OnSettingsChanged, OnExitRequested);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         }
 
