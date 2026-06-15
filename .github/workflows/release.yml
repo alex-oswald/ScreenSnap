@@ -18,6 +18,9 @@ jobs:
   build:
     name: Build ${{ matrix.arch }} MSI
     runs-on: windows-latest
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -75,11 +78,35 @@ jobs:
             -p:Version=${{ steps.version.outputs.msi_version }} `
             -o publish/${{ matrix.arch }}
 
+      - name: Azure login (for Trusted Signing)
+        if: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT != '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign ScreenSnap.exe
+        if: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT != '' }}
+        uses: azure/trusted-signing-action@v0
+        with:
+          endpoint: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}/publish/${{ matrix.arch }}
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
       - name: Install WiX
         shell: pwsh
         run: |
           dotnet tool install --global wix --version 6.0.*
           "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+          # Pin the util extension to a 6.x build; the latest (7.x) is
+          # incompatible with WiX v6.
+          wix extension add --global WixToolset.Util.wixext/6.0.*
 
       - name: Build MSI
         shell: pwsh
@@ -88,9 +115,23 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           wix build installer/ScreenSnap.wxs `
             -arch ${{ matrix.wixarch }} `
+            -ext WixToolset.Util.wixext `
             -d PublishDir="$pub" `
             -d ProductVersion=${{ steps.version.outputs.msi_version }} `
             -o "dist/ScreenSnap-${{ steps.version.outputs.release_version }}-${{ matrix.arch }}.msi"
+
+      - name: Sign MSI
+        if: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT != '' }}
+        uses: azure/trusted-signing-action@v0
+        with:
+          endpoint: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}/dist
+          files-folder-filter: msi
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7

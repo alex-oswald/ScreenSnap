@@ -5,14 +5,21 @@
   Per-user install (no admin/UAC) under %LocalAppData%\Programs\ScreenSnap.
   The published, self-contained app folder is harvested wholesale via <Files>.
 
+  Uses the WixToolset.Util.wixext extension for <util:CloseApplication>, so
+  the build command must include `-ext WixToolset.Util.wixext`. Pin the
+  util extension to a 6.x build (`wix extension add --global
+  WixToolset.Util.wixext/6.0.*`); the latest 7.x is incompatible with WiX v6.
+
   Built from the workflow / locally with:
     wix build installer\ScreenSnap.wxs ^
       -arch <x64|arm64> ^
+      -ext WixToolset.Util.wixext ^
       -d PublishDir=<absolute path to publish folder> ^
       -d ProductVersion=<x.y.z> ^
       -o ScreenSnap-<version>-<arch>.msi
 -->
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <Package
     Name="ScreenSnap"
     Manufacturer="Alex Oswald"
@@ -22,15 +29,39 @@
     Compressed="yes"
     Language="1033">
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of ScreenSnap is already installed." />
+    <!--
+      Install the new version first, then remove the old one. Safer than the
+      default (afterInstallValidate) because if the new install fails the
+      user is left with the previous working version instead of nothing.
+    -->
+    <MajorUpgrade
+      Schedule="afterInstallExecute"
+      DowngradeErrorMessage="A newer version of ScreenSnap is already installed." />
 
     <MediaTemplate EmbedCab="yes" />
+
+    <!--
+      Politely close a running ScreenSnap.exe before upgrading so the install
+      doesn't trip the Windows Installer "files in use" dialog or schedule a
+      reboot. CloseMessage/EndSessionMessage send WM_CLOSE/WM_QUERYENDSESSION
+      to the app's main window; TerminateProcess="5" force-terminates after
+      5 seconds as a fallback if the app doesn't exit on its own.
+    -->
+    <util:CloseApplication
+      Id="CloseScreenSnap"
+      Target="ScreenSnap.exe"
+      Description="Please close ScreenSnap so the upgrade can continue."
+      CloseMessage="yes"
+      EndSessionMessage="yes"
+      RebootPrompt="no"
+      TerminateProcess="5" />
 
     <!-- Add/Remove Programs metadata -->
     <Icon Id="ScreenSnapIcon" SourceFile="$(var.PublishDir)\ScreenSnap.exe" />
     <Property Id="ARPPRODUCTICON" Value="ScreenSnapIcon" />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/alex-oswald/ScreenSnap" />
     <Property Id="ARPNOREPAIR" Value="1" />
+    <Property Id="ARPNOMODIFY" Value="1" />
 
     <!-- Install location: %LocalAppData%\Programs\ScreenSnap -->
     <StandardDirectory Id="LocalAppDataFolder">
