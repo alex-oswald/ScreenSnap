@@ -206,12 +206,13 @@ internal sealed class TrayIcon : IDisposable
             switch (mouseMessage)
             {
                 case WM_LBUTTONUP:
+                case WM_LBUTTONDBLCLK:
+                    // Left-click (or double-click) opens the app; only right-click shows the menu.
+                    SettingsRequested?.Invoke();
+                    return default;
                 case WM_RBUTTONUP:
                 case WM_CONTEXTMENU:
                     ShowContextMenu();
-                    return default;
-                case WM_LBUTTONDBLCLK:
-                    SettingsRequested?.Invoke();
                     return default;
             }
 
