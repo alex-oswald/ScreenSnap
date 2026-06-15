@@ -105,7 +105,7 @@ internal sealed class TrayIcon : IDisposable
         {
             var wc = new WNDCLASSEXW
             {
-                cbSize = (uint)sizeof(WNDCLASSEXW),
+                cbSize = (uint)Marshal.SizeOf<WNDCLASSEXW>(),
                 lpfnWndProc = _wndProc,
                 hInstance = _hinstance,
                 lpszClassName = new PCWSTR(classNamePtr),
