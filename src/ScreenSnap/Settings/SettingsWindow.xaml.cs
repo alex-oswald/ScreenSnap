@@ -1,6 +1,7 @@
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using ScreenSnap.Core.Presets;
@@ -13,6 +14,7 @@ public sealed partial class SettingsWindow : Window
     private readonly SettingsViewModel _viewModel;
     private readonly Action _onExitRequested;
     private bool _allowClose;
+    private int _dragSourceIndex = -1;
 
     internal SettingsWindow(PresetManager manager, AppSettings settings, Action onSettingsChanged, Action onExitRequested)
     {
@@ -114,9 +116,29 @@ public sealed partial class SettingsWindow : Window
 
     private void OnDelete(object sender, RoutedEventArgs e) => _viewModel.DeleteSelected();
 
-    private void OnMoveUp(object sender, RoutedEventArgs e) => _viewModel.MoveSelected(-1);
+    private void OnPresetsDragItemsStarting(object sender, DragItemsStartingEventArgs e)
+    {
+        // Remember where the dragged item started so DragItemsCompleted can tell
+        // PresetManager how to mirror the move into the persisted document.
+        _dragSourceIndex = e.Items.Count > 0 && e.Items[0] is PresetViewModel preset
+            ? _viewModel.Presets.IndexOf(preset)
+            : -1;
+    }
 
-    private void OnMoveDown(object sender, RoutedEventArgs e) => _viewModel.MoveSelected(1);
+    private void OnPresetsDragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
+    {
+        int sourceIndex = _dragSourceIndex;
+        _dragSourceIndex = -1;
+
+        if (sourceIndex < 0 || args.Items.Count == 0 || args.Items[0] is not PresetViewModel preset)
+            return;
+
+        int newIndex = _viewModel.Presets.IndexOf(preset);
+        if (newIndex < 0)
+            return;
+
+        _viewModel.ReorderPreset(sourceIndex, newIndex);
+    }
 
     private void OnRecapture(object sender, RoutedEventArgs e) => _viewModel.RecaptureSelected();
 

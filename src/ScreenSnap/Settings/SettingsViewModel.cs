@@ -153,20 +153,18 @@ internal sealed class SettingsViewModel : ObservableObject
         StatusMessage = "Preset deleted.";
     }
 
-    /// <summary>Moves the selected preset up (-1) or down (+1) in the list.</summary>
-    public void MoveSelected(int direction)
+    /// <summary>
+    /// Mirrors a UI-driven drag-and-drop reorder of <see cref="Presets"/> into the
+    /// underlying <see cref="PresetManager"/>. The collection itself has already
+    /// been reordered by the <c>ListView</c>; this just persists the new order.
+    /// </summary>
+    public void ReorderPreset(int oldIndex, int newIndex)
     {
-        if (_selected is null)
+        if (oldIndex == newIndex)
             return;
 
-        int index = Presets.IndexOf(_selected);
-        int newIndex = index + direction;
-        if (newIndex < 0 || newIndex >= Presets.Count)
-            return;
-
-        _manager.Move(index, newIndex);
-        Presets.Move(index, newIndex);
-        OnPropertyChanged(nameof(Selected));
+        _manager.Move(oldIndex, newIndex);
+        StatusMessage = "Reordered presets.";
     }
 
     /// <summary>Commits edits to the selected preset and applies it to the system.</summary>

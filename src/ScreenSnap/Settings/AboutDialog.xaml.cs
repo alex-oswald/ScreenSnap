@@ -20,7 +20,10 @@ public sealed partial class AboutDialog : ContentDialog
         DescriptionText.Text = AppInfo.Description;
         GitHubLink.NavigateUri = new Uri(AppInfo.GitHubUrl);
 
-        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "ScreenSnap.ico");
+        // The About dialog renders the icon at 48 DIPs, so we load the 256x256
+        // PNG (rather than the multi-frame .ico, where BitmapImage tends to pick
+        // a small frame and scale it up, producing a blurry image).
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "ScreenSnap.png");
         if (File.Exists(iconPath))
             AppIcon.Source = new BitmapImage(new Uri(iconPath));
     }
