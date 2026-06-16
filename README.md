@@ -64,6 +64,26 @@ nothing else to install. It installs per-user (no admin prompt) under
 > Not sure which one? Most PCs are x64. Choose arm64 only on ARM devices such as Snapdragon-based
 > Copilot+ PCs or a Surface Pro X.
 
+#### Upgrading
+
+Just run the newer MSI — it upgrades your existing install in place. There's no need to uninstall
+first, you'll still have a single entry in **Settings → Apps**, and your presets and settings under
+`%LocalAppData%\ScreenSnap` are preserved. If ScreenSnap is running when you start the upgrade,
+the installer will close it for you.
+
+#### Windows SmartScreen / Smart App Control
+
+Until the project has signed releases set up, Windows will warn that the publisher is unverified:
+
+- **SmartScreen** ("Windows protected your PC"): click **More info → Run anyway**.
+- If the downloaded file is blocked, right-click the MSI → **Properties** → tick **Unblock** → **OK**.
+- **Smart App Control** (Windows 11) is stricter — if SAC is on in **Enforcement** mode it will
+  block the unsigned MSI outright. Either switch SAC to **Evaluation** or **Off** in
+  **Windows Security → App & browser control → Smart App Control settings**, or wait for a signed
+  release.
+
+Once code signing is enabled in the release workflow, these warnings will go away.
+
 ## Building from source
 
 ### Prerequisites
