@@ -7,8 +7,8 @@
 
   Uses the WixToolset.Util.wixext extension for <util:CloseApplication>, so
   the build command must include `-ext WixToolset.Util.wixext`. Pin the
-  util extension to a 6.x build (`wix extension add --global
-  WixToolset.Util.wixext/6.0.*`); the latest 7.x is incompatible with WiX v6.
+  util extension to the same WiX v6 version (e.g. WixToolset.Util.wixext/6.0.2);
+  wildcard refs are rejected and 7.x is incompatible with WiX v6.
 
   Built from the workflow / locally with:
     wix build installer\ScreenSnap.wxs ^
