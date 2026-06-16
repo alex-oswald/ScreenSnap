@@ -103,11 +103,12 @@ jobs:
       - name: Install WiX
         shell: pwsh
         run: |
-          dotnet tool install --global wix --version 6.0.*
+          $wixVersion = '6.0.2'
+          dotnet tool install --global wix --version $wixVersion
           "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
-          # Pin the util extension to a 6.x build; the latest (7.x) is
-          # incompatible with WiX v6.
-          wix extension add --global WixToolset.Util.wixext/6.0.*
+          # Pin the util extension to the same WiX v6 version; 7.x is
+          # incompatible with WiX v6 and wildcard version refs are not accepted.
+          wix extension add --global WixToolset.Util.wixext/$wixVersion
 
       - name: Build MSI
         shell: pwsh
