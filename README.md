@@ -149,4 +149,4 @@ future **MSIX** build can swap the `%LOCALAPPDATA%` storage for `ApplicationData
 
 ## License
 
-No license has been chosen yet.
+ScreenSnap is released under the [MIT License](LICENSE).
