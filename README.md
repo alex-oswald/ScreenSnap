@@ -82,8 +82,7 @@ Until the project has signed releases set up, Windows will warn that the publish
   **Windows Security → App & browser control → Smart App Control settings**, or wait for a signed
   release.
 
-Once code signing is enabled in the release workflow (see
-[`docs/signing.md`](docs/signing.md)), these warnings will go away.
+Once code signing is enabled in the release workflow, these warnings will go away.
 
 ## Building from source
 
