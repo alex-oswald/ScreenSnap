@@ -18,7 +18,11 @@ jobs:
   build:
     name: Build ${{ matrix.arch }} MSI
     runs-on: windows-latest
-    environment: release
+    # Stable tags (vX.Y.Z) target the `release` environment (production
+    # signing vars, any approval gates). Prerelease tags (vX.Y.Z-betaN,
+    # -rcN, -alphaN) and manual workflow_dispatch runs target `development`,
+    # which has its own signing vars and federated credential.
+    environment: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-')) && 'release' || 'development' }}
     permissions:
       contents: read
       id-token: write
@@ -30,10 +34,12 @@ jobs:
             rid: win-x64
             platform: x64
             wixarch: x64
+            utilca: Wix4UtilCA_X64
           - arch: arm64
             rid: win-arm64
             platform: ARM64
             wixarch: arm64
+            utilca: Wix4UtilCA_A64
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -123,6 +129,7 @@ jobs:
             -ext WixToolset.Util.wixext `
             -d PublishDir="$pub" `
             -d ProductVersion=${{ steps.version.outputs.msi_version }} `
+            -d UtilCA=${{ matrix.utilca }} `
             -o "dist/ScreenSnap-${{ steps.version.outputs.release_version }}-${{ matrix.arch }}.msi"
 
       - name: Sign MSI
