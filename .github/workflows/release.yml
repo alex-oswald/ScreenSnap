@@ -90,7 +90,7 @@ jobs:
 
       - name: Azure login (for Trusted Signing)
         if: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT != '' }}
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -98,10 +98,10 @@ jobs:
 
       - name: Sign ScreenSnap.exe
         if: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT != '' }}
-        uses: azure/trusted-signing-action@v0
+        uses: azure/artifact-signing-action@v2
         with:
           endpoint: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
-          trusted-signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
           certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
           files-folder: ${{ github.workspace }}/publish/${{ matrix.arch }}
           files-folder-filter: exe
@@ -134,10 +134,10 @@ jobs:
 
       - name: Sign MSI
         if: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT != '' }}
-        uses: azure/trusted-signing-action@v0
+        uses: azure/artifact-signing-action@v2
         with:
           endpoint: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
-          trusted-signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
           certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
           files-folder: ${{ github.workspace }}/dist
           files-folder-filter: msi
@@ -172,7 +172,7 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ScreenSnap ${{ github.ref_name }}
           draft: false
