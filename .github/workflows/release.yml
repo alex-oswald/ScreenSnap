@@ -14,12 +14,6 @@ on:
 permissions:
   contents: write
 
-env:
-  # Opt every JS action (including transitive ones such as the actions/cache
-  # pulled in by actions/setup-dotnet) into the Node 24 runtime so we don't
-  # trip the Node 20 deprecation that became enforcing on 2026-06-16.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     name: Build ${{ matrix.arch }} MSI
