@@ -76,7 +76,10 @@ jobs:
             -p:WindowsPackageType=None `
             -p:DebugType=none `
             -p:DebugSymbols=false `
-            -p:Version=${{ steps.version.outputs.msi_version }} `
+            -p:Version=${{ steps.version.outputs.release_version }} `
+            -p:AssemblyVersion=${{ steps.version.outputs.msi_version }} `
+            -p:FileVersion=${{ steps.version.outputs.msi_version }} `
+            -p:InformationalVersion=${{ steps.version.outputs.release_version }} `
             -o publish/${{ matrix.arch }}
 
       - name: Azure login (for Trusted Signing)
