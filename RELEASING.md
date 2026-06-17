@@ -14,9 +14,9 @@ publish.
 | `vX.Y.Z-betaN`     | Prerelease  | `v1.2.3-beta5`   | prerelease          |
 | `vX.Y.Z-rcN`       | Prerelease  | `v1.2.3-rc2`     | prerelease          |
 
-`N` is `1..99`. Tags with any other prerelease label (`v1.2.3-dev`,
-`v1.2.3-beta.5`, etc.) are rejected by the version-derivation step — keep
-the label set small so the MSI versioning rules below stay unambiguous.
+The prerelease label is preserved in the file name and
+`InformationalVersion`, but stripped before deriving the numeric MSI
+`ProductVersion` (see below).
 
 ## GitHub Environments
 
@@ -56,41 +56,31 @@ If signing fails with `AADSTS70021` / "No matching federated identity
 record found", that credential is missing — add it on the app registration
 in the Azure portal under `Certificates & secrets → Federated credentials`.
 
-## MSI ProductVersion encoding
+## MSI ProductVersion
 
-`ProductVersion` must be `major.minor.build` with `build ≤ 65535`. To keep
-every release tag producing a unique, monotonically increasing MSI version
-(so `<MajorUpgrade>` actually fires), the workflow encodes the prerelease
-number into the build field:
+`ProductVersion` is the numeric `major.minor.patch` from the tag, with any
+prerelease suffix stripped (e.g. `v1.2.3-beta5` -> `1.2.3`). The file name
+and the .NET `InformationalVersion` keep the original semver string
+(`ScreenSnap-1.2.3-beta5-x64.msi`).
 
+Caveat: because the suffix is stripped, every prerelease of the same
+`x.y.z` produces an MSI with the same `ProductVersion`. `<MajorUpgrade>`
+only fires on a strictly greater version, so a fresh install of, say,
+`v1.2.3-beta6` over an existing `v1.2.3-beta5` falls into Windows
+Installer maintenance-mode reconfigure (progress bar, then nothing). To
+test a new prerelease over an old one on the same machine, uninstall the
+old one first:
+
+```pwsh
+Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall |
+  ForEach-Object { Get-ItemProperty $_.PSPath } |
+  Where-Object DisplayName -like 'ScreenSnap*' |
+  Select-Object DisplayName, DisplayVersion, PSChildName
+msiexec /x "{ProductCode-GUID}" /qb
 ```
-build = patch * 1000 + bucket + N
-```
 
-| Kind     | Bucket | `N` range | Example tag      | MSI ProductVersion |
-|----------|--------|-----------|------------------|---------------------|
-| alpha    | 0      | 1..99     | `v1.2.3-alpha7`  | `1.2.3007`          |
-| beta     | 100    | 1..99     | `v1.2.3-beta5`   | `1.2.3105`          |
-| rc       | 500    | 1..99     | `v1.2.3-rc2`     | `1.2.3502`          |
-| stable   | 999    | (none)    | `v1.2.3`         | `1.2.3999`          |
-
-Within a given `x.y.z`, this ordering holds:
-
-```
-alpha1 < ... < alpha99 < beta1 < ... < beta99 < rc1 < ... < rc99 < stable
-```
-
-The file name and the .NET `InformationalVersion` keep the original semver
-string (e.g. `ScreenSnap-1.2.3-beta5-x64.msi`); only the WiX
-`ProductVersion` is the numeric encoding.
-
-Caveats:
-
-- `patch * 1000 + 999` exceeds 65535 once `patch ≥ 65` — bump major/minor
-  well before that.
-- The `1..99` prerelease range matches typical release cadence. If you ever
-  need more iterations of a single prerelease, cut a new patch instead
-  (`v1.2.4-beta1`) rather than expanding the numeric ranges.
+For stable releases (which bump `patch`), `<MajorUpgrade>` works as
+expected.
 
 ## Cutting a release
 
@@ -119,7 +109,7 @@ wix build installer/ScreenSnap.wxs `
   -arch x64 `
   -ext WixToolset.Util.wixext `
   -d PublishDir="$((Resolve-Path publish/x64).Path)" `
-  -d ProductVersion=0.0.1999 `
+  -d ProductVersion=0.0.1 `
   -d UtilCA=Wix4UtilCA_X64 `
   -o dist/ScreenSnap-local-x64.msi
 ```
