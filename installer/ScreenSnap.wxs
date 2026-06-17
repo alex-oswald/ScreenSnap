@@ -16,6 +16,7 @@
       -ext WixToolset.Util.wixext ^
       -d PublishDir=<absolute path to publish folder> ^
       -d ProductVersion=<x.y.z> ^
+      -d UtilCA=<Wix4UtilCA_X64|Wix4UtilCA_A64> ^
       -o ScreenSnap-<version>-<arch>.msi
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
@@ -62,6 +63,35 @@
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/alex-oswald/ScreenSnap" />
     <Property Id="ARPNOREPAIR" Value="1" />
     <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!--
+      Launch ScreenSnap.exe at the end of a fresh install / major upgrade.
+      Uses WixShellExec from WixUtilExtension. ShellExecute returns
+      immediately, so we don't need an async return type; Return="ignore"
+      keeps the install successful even if the launch itself fails (e.g.
+      AV blocks it). Condition NOT Installed AND NOT REMOVE skips uninstall
+      and the maintenance-mode reconfigure path.
+      $(var.UtilCA) is set per-arch by the workflow (Wix4UtilCA_X64 /
+      Wix4UtilCA_A64) so the right CustomAction DLL is invoked.
+
+      WixShellExecTarget must be populated at runtime via a type-51
+      property-setter CA — populating it at author time with
+      [INSTALLFOLDER]... isn't supported (WIX1077).
+    -->
+    <CustomAction Id="SetWixShellExecTarget"
+                  Property="WixShellExecTarget"
+                  Value="[INSTALLFOLDER]ScreenSnap.exe" />
+    <CustomAction Id="LaunchScreenSnap"
+                  BinaryRef="$(var.UtilCA)"
+                  DllEntry="WixShellExec"
+                  Impersonate="yes"
+                  Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="SetWixShellExecTarget" After="InstallFinalize"
+              Condition="NOT Installed AND NOT REMOVE" />
+      <Custom Action="LaunchScreenSnap" After="SetWixShellExecTarget"
+              Condition="NOT Installed AND NOT REMOVE" />
+    </InstallExecuteSequence>
 
     <!-- Install location: %LocalAppData%\Programs\ScreenSnap -->
     <StandardDirectory Id="LocalAppDataFolder">

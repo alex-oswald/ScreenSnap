@@ -18,7 +18,11 @@ jobs:
   build:
     name: Build ${{ matrix.arch }} MSI
     runs-on: windows-latest
-    environment: release
+    # Stable tags (vX.Y.Z) target the `release` environment (production
+    # signing vars, any approval gates). Prerelease tags (vX.Y.Z-betaN,
+    # -rcN, -alphaN) and manual workflow_dispatch runs target `development`,
+    # which has its own signing vars and federated credential.
+    environment: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-')) && 'release' || 'development' }}
     permissions:
       contents: read
       id-token: write
@@ -30,10 +34,12 @@ jobs:
             rid: win-x64
             platform: x64
             wixarch: x64
+            utilca: Wix4UtilCA_X64
           - arch: arm64
             rid: win-arm64
             platform: ARM64
             wixarch: arm64
+            utilca: Wix4UtilCA_A64
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -52,17 +58,52 @@ jobs:
           } else {
             $raw = '${{ github.event.inputs.version }}'
           }
-          # MSI ProductVersion must be numeric major.minor.patch.
-          $core = ($raw -split '[-+]')[0]
+
+          # Split semver into numeric core (x.y.z) and optional prerelease label.
+          # Build-metadata (anything after `+`) is dropped for MSI purposes.
+          $rawNoMeta = ($raw -split '\+', 2)[0]
+          $core, $pre = ($rawNoMeta -split '-', 2)
           $parts = @($core -split '\.')
           while ($parts.Count -lt 3) { $parts += '0' }
-          $core = ($parts[0..2] -join '.')
-          if ($core -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Could not derive a numeric version from '$raw'. Tag releases as vMAJOR.MINOR.PATCH (e.g. v1.2.3)."
+          if (-not ($parts[0] -match '^\d+$' -and $parts[1] -match '^\d+$' -and $parts[2] -match '^\d+$')) {
+            throw "Could not derive numeric major.minor.patch from '$raw'. Tag releases as vMAJOR.MINOR.PATCH[-(alpha|beta|rc)N] (e.g. v1.2.3 or v1.2.3-beta5)."
           }
-          "release_version=$raw" >> $env:GITHUB_OUTPUT
-          "msi_version=$core"   >> $env:GITHUB_OUTPUT
-          Write-Host "release_version=$raw  msi_version=$core"
+          [int]$maj = $parts[0]; [int]$min = $parts[1]; [int]$patch = $parts[2]
+
+          # MSI ProductVersion is major.minor.build with build <= 65535.
+          # Encode prerelease into the build field so every release tag
+          # produces a unique, monotonically increasing ProductVersion and
+          # <MajorUpgrade> can actually do its job.
+          #
+          # Mapping (chosen so stable > rc > beta > alpha within a patch):
+          #   vX.Y.Z         -> X.Y.(Z*1000 + 999)
+          #   vX.Y.Z-rcN     -> X.Y.(Z*1000 + 500 + N)   (N: 1..99)
+          #   vX.Y.Z-betaN   -> X.Y.(Z*1000 + 100 + N)   (N: 1..99)
+          #   vX.Y.Z-alphaN  -> X.Y.(Z*1000 +   0 + N)   (N: 1..99)
+          $build = $patch * 1000
+          if ([string]::IsNullOrEmpty($pre)) {
+            $build += 999
+          } elseif ($pre -match '^(alpha|beta|rc)\.?(\d+)$') {
+            $kind = $Matches[1]; [int]$n = $Matches[2]
+            if ($n -lt 1 -or $n -gt 99) {
+              throw "Prerelease number $n out of range (1..99) in '$raw'."
+            }
+            switch ($kind) {
+              'alpha' { $build += 0   + $n }
+              'beta'  { $build += 100 + $n }
+              'rc'    { $build += 500 + $n }
+            }
+          } else {
+            throw "Unrecognized prerelease label '$pre' in '$raw'. Use alphaN, betaN, or rcN (e.g. -beta5)."
+          }
+          if ($build -gt 65535) {
+            throw "Computed MSI build field $build exceeds the 65535 limit. Bump major/minor."
+          }
+          $msi_version = "$maj.$min.$build"
+
+          "release_version=$raw"      >> $env:GITHUB_OUTPUT
+          "msi_version=$msi_version"  >> $env:GITHUB_OUTPUT
+          Write-Host "release_version=$raw  msi_version=$msi_version"
 
       - name: Publish (self-contained)
         shell: pwsh
@@ -123,6 +164,7 @@ jobs:
             -ext WixToolset.Util.wixext `
             -d PublishDir="$pub" `
             -d ProductVersion=${{ steps.version.outputs.msi_version }} `
+            -d UtilCA=${{ matrix.utilca }} `
             -o "dist/ScreenSnap-${{ steps.version.outputs.release_version }}-${{ matrix.arch }}.msi"
 
       - name: Sign MSI
