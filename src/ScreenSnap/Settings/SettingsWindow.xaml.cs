@@ -16,12 +16,17 @@ public sealed partial class SettingsWindow : Window
     private bool _allowClose;
     private int _dragSourceIndex = -1;
 
+    /// <summary>The window's view model, surfaced as a typed root for compiled {x:Bind} bindings.</summary>
+    internal SettingsViewModel ViewModel => _viewModel;
+
     internal SettingsWindow(PresetManager manager, AppSettings settings, Action onSettingsChanged, Action onExitRequested)
     {
-        InitializeComponent();
         _viewModel = new SettingsViewModel(manager, settings, onSettingsChanged);
         _onExitRequested = onExitRequested;
-        RootGrid.DataContext = _viewModel;
+
+        // The view model must be assigned before InitializeComponent so the initial
+        // {x:Bind} evaluation sees a populated ViewModel instead of null.
+        InitializeComponent();
 
         Title = "ScreenSnap";
 

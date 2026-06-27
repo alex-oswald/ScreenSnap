@@ -6,16 +6,11 @@ namespace ScreenSnap.Core.Presets;
 /// <summary>
 /// JSON-backed <see cref="IPresetStore"/>. Writes are atomic (temp file + replace) and a
 /// missing or corrupt file is treated as "no presets yet" rather than an error so the app
-/// always starts cleanly.
+/// always starts cleanly. Serialization uses source-generated metadata
+/// (<see cref="PresetsJsonContext"/>) so it works under Native AOT.
 /// </summary>
 public sealed class JsonPresetStore : IPresetStore
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
-
     private readonly IStorageLocations _locations;
 
     public JsonPresetStore(IStorageLocations locations)
@@ -36,7 +31,7 @@ public sealed class JsonPresetStore : IPresetStore
             if (string.IsNullOrWhiteSpace(json))
                 return new PresetsDocument();
 
-            return JsonSerializer.Deserialize<PresetsDocument>(json, SerializerOptions) ?? new PresetsDocument();
+            return JsonSerializer.Deserialize(json, PresetsJsonContext.Default.PresetsDocument) ?? new PresetsDocument();
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -55,7 +50,7 @@ public sealed class JsonPresetStore : IPresetStore
         string path = _locations.PresetsFilePath;
         string tempPath = path + ".tmp";
 
-        string json = JsonSerializer.Serialize(document, SerializerOptions);
+        string json = JsonSerializer.Serialize(document, PresetsJsonContext.Default.PresetsDocument);
         File.WriteAllText(tempPath, json);
 
         // Atomic replace so a crash mid-write cannot corrupt the existing file.

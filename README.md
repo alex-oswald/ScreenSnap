@@ -92,6 +92,10 @@ Once code signing is enabled in the release workflow, these warnings will go awa
 - [.NET SDK 10](https://dotnet.microsoft.com/download) (the app targets `net10.0-windows10.0.19041.0`).
 - The [Windows App SDK 2.2 runtime](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads)
   (the unpackaged app needs the runtime installed).
+- **Publishing only:** the release builds publish with **Native AOT**, which additionally needs the
+  **Desktop development with C++** workload — the MSVC toolset plus a Windows SDK — so the AOT
+  compiler can link the native executable (for ARM64, also install the **C++ ARM64 build tools**).
+  Plain `dotnet build` / F5 debugging runs on CoreCLR and does **not** require the C++ tools.
 
 ### Build
 
@@ -102,6 +106,21 @@ dotnet build ScreenSnap.slnx -c Debug
 
 The executable is produced at
 `src\ScreenSnap\bin\x64\Debug\net10.0-windows10.0.19041.0\ScreenSnap.exe`.
+
+### Publish (Native AOT)
+
+Release builds are compiled with [Native AOT](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
+(`<PublishAot>` is enabled in `ScreenSnap.csproj`), producing a self-contained native executable with
+no JIT. This requires the **Desktop development with C++** workload (see Prerequisites):
+
+```powershell
+# from the repository root (win-x64; use win-arm64 on ARM)
+dotnet publish src\ScreenSnap\ScreenSnap.csproj -c Release -r win-x64 `
+  -p:Platform=x64 --self-contained true -p:WindowsAppSDKSelfContained=true `
+  -p:WindowsPackageType=None -o publish\x64
+```
+
+AOT only runs at `dotnet publish` time — the `Debug` build and F5 debugging above stay on CoreCLR.
 
 ### Run
 
@@ -122,8 +141,8 @@ dotnet test tests\ScreenSnap.Core.Tests\ScreenSnap.Core.Tests.csproj -c Debug -p
 ### Releasing
 
 Releases are built by the [`Release`](.github/workflows/release.yml) GitHub Actions workflow. Pushing
-a `vMAJOR.MINOR.PATCH` tag builds self-contained MSIs for x64 and arm64 and publishes them as a
-GitHub Release:
+a `vMAJOR.MINOR.PATCH` tag builds self-contained, Native AOT MSIs for x64 and arm64 and publishes
+them as a GitHub Release:
 
 ```powershell
 git tag v1.2.3
