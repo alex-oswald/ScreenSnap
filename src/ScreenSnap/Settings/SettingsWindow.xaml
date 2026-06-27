@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:ScreenSnap.Settings"
     mc:Ignorable="d"
     Title="ScreenSnap">
 
@@ -70,8 +71,8 @@
             <TextBlock Grid.Row="0" Text="Presets" Style="{StaticResource SubtitleTextBlockStyle}" />
 
             <ListView Grid.Row="1"
-                      ItemsSource="{Binding Presets}"
-                      SelectedItem="{Binding Selected, Mode=TwoWay}"
+                      ItemsSource="{x:Bind ViewModel.Presets}"
+                      SelectedItem="{x:Bind ViewModel.Selected, Mode=TwoWay}"
                       SelectionMode="Single"
                       CanDragItems="True"
                       CanReorderItems="True"
@@ -82,8 +83,8 @@
                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                       CornerRadius="6">
                 <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding DisplayName}" />
+                    <DataTemplate x:DataType="vm:PresetViewModel">
+                        <TextBlock Text="{x:Bind DisplayName, Mode=OneWay}" />
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
@@ -107,26 +108,26 @@
                     CornerRadius="6"
                     Padding="12">
                 <StackPanel Spacing="8">
-                    <ToggleSwitch Header="Global hotkeys" IsOn="{Binding HotkeysEnabled, Mode=TwoWay}" />
-                    <TextBlock Text="{Binding HotkeyHint}" TextWrapping="Wrap" Opacity="0.7" />
+                    <ToggleSwitch Header="Global hotkeys" IsOn="{x:Bind ViewModel.HotkeysEnabled, Mode=TwoWay}" />
+                    <TextBlock Text="{x:Bind ViewModel.HotkeyHint, Mode=OneWay}" TextWrapping="Wrap" Opacity="0.7" />
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                        <CheckBox Content="Ctrl" IsChecked="{Binding ModControl, Mode=TwoWay}" />
-                        <CheckBox Content="Alt" IsChecked="{Binding ModAlt, Mode=TwoWay}" />
-                        <CheckBox Content="Shift" IsChecked="{Binding ModShift, Mode=TwoWay}" />
-                        <CheckBox Content="Win" IsChecked="{Binding ModWin, Mode=TwoWay}" />
+                        <CheckBox Content="Ctrl" IsChecked="{x:Bind ViewModel.ModControl, Mode=TwoWay}" />
+                        <CheckBox Content="Alt" IsChecked="{x:Bind ViewModel.ModAlt, Mode=TwoWay}" />
+                        <CheckBox Content="Shift" IsChecked="{x:Bind ViewModel.ModShift, Mode=TwoWay}" />
+                        <CheckBox Content="Win" IsChecked="{x:Bind ViewModel.ModWin, Mode=TwoWay}" />
                     </StackPanel>
-                    <CheckBox Content="Also bind 1–9 to jump to presets" IsChecked="{Binding EnableJumpHotkeys, Mode=TwoWay}" />
+                    <CheckBox Content="Also bind 1–9 to jump to presets" IsChecked="{x:Bind ViewModel.EnableJumpHotkeys, Mode=TwoWay}" />
                     <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2,0,2" />
-                    <CheckBox Content="Start ScreenSnap when I sign in" IsChecked="{Binding RunAtStartup, Mode=TwoWay}" />
+                    <CheckBox Content="Start ScreenSnap when I sign in" IsChecked="{x:Bind ViewModel.RunAtStartup, Mode=TwoWay}" />
                 </StackPanel>
             </Border>
         </Grid>
 
         <!-- Right: editor for the selected preset -->
         <ScrollViewer Grid.Row="0" Grid.Column="1">
-            <StackPanel Spacing="14" DataContext="{Binding Selected}">
+            <StackPanel Spacing="14">
                 <TextBox Header="Preset name"
-                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{x:Bind ViewModel.Selected.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          PlaceholderText="e.g. Desk monitors or TV / gaming" />
 
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -143,9 +144,9 @@
                            Opacity="0.7"
                            Text="Turn a monitor off to disable it in this preset, and mark one monitor as primary. Choose each monitor's resolution and orientation; leave resolution on &quot;Use current resolution&quot; to keep whatever it is already using." />
 
-                <ItemsControl ItemsSource="{Binding Monitors}">
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Selected.Monitors, Mode=OneWay}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="vm:MonitorRowViewModel">
                             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
@@ -153,18 +154,18 @@
                                     Padding="12"
                                     Margin="0,0,0,10">
                                 <StackPanel Spacing="10">
-                                    <TextBlock Text="{Binding FriendlyName}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind FriendlyName}" FontWeight="SemiBold" />
                                     <StackPanel Orientation="Horizontal" Spacing="20">
-                                        <ToggleSwitch Header="Enabled" IsOn="{Binding Enabled, Mode=TwoWay}" />
-                                        <ToggleSwitch Header="Primary" IsOn="{Binding IsPrimary, Mode=TwoWay}" />
+                                        <ToggleSwitch Header="Enabled" IsOn="{x:Bind Enabled, Mode=TwoWay}" />
+                                        <ToggleSwitch Header="Primary" IsOn="{x:Bind IsPrimary, Mode=TwoWay}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                         <ComboBox Header="Resolution" Width="190"
-                                                  ItemsSource="{Binding Resolutions}"
-                                                  SelectedItem="{Binding SelectedResolution, Mode=TwoWay}" />
+                                                  ItemsSource="{x:Bind Resolutions}"
+                                                  SelectedItem="{x:Bind SelectedResolution, Mode=TwoWay}" />
                                         <ComboBox Header="Orientation" Width="190"
-                                                  ItemsSource="{Binding Orientations}"
-                                                  SelectedItem="{Binding SelectedOrientation, Mode=TwoWay}" />
+                                                  ItemsSource="{x:Bind Orientations}"
+                                                  SelectedItem="{x:Bind SelectedOrientation, Mode=TwoWay}" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -189,7 +190,7 @@
                         <TextBlock Text="Exit" />
                     </StackPanel>
                 </Button>
-                <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
                 <Button Click="OnApply" ToolTipService.ToolTip="Apply the selected preset now">

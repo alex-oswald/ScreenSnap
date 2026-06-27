@@ -70,9 +70,12 @@ jobs:
           "msi_version=$core"   >> $env:GITHUB_OUTPUT
           Write-Host "release_version=$raw  msi_version=$core"
 
-      - name: Publish (self-contained)
+      - name: Publish (self-contained, Native AOT)
         shell: pwsh
         run: |
+          # <PublishAot> is enabled in ScreenSnap.csproj, so this self-contained publish
+          # compiles a native executable via ILC. windows-latest ships the Desktop C++
+          # toolset + Windows SDK (incl. ARM64 cross tools) that the native link step needs.
           dotnet publish src/ScreenSnap/ScreenSnap.csproj `
             -c Release `
             -r ${{ matrix.rid }} `

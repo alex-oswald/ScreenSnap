@@ -12,7 +12,7 @@ namespace ScreenSnap.Tray;
 /// keeping third-party dependencies out of the project. All events are raised on the
 /// UI thread (the thread that constructs the icon and pumps the message loop).
 /// </summary>
-internal sealed class TrayIcon : IDisposable
+internal sealed partial class TrayIcon : IDisposable
 {
     private const string WindowClassName = "ScreenSnapTrayWindow";
     private const uint TrayIconId = 1;
@@ -50,7 +50,10 @@ internal sealed class TrayIcon : IDisposable
     public TrayIcon()
     {
         _wndProc = WndProc;
-        _hinstance = new HINSTANCE(Marshal.GetHINSTANCE(typeof(TrayIcon).Module));
+        // GetModuleHandle(null) returns the process (exe) HINSTANCE. Unlike
+        // Marshal.GetHINSTANCE(Module), it stays correct under single-file/Native AOT
+        // publishing, where managed modules aren't backed by a file on disk.
+        _hinstance = new HINSTANCE(GetModuleHandleW(null));
         _taskbarCreatedMessage = PInvoke.RegisterWindowMessage("TaskbarCreated");
 
         CreateMessageWindow();
@@ -303,4 +306,14 @@ internal sealed class TrayIcon : IDisposable
             _icon = default;
         }
     }
+
+    // Source-generated P/Invoke (AOT/single-file safe). CsWin32's GetModuleHandle projection
+    // returns a FreeLibrarySafeHandle whose finalizer would wrongly FreeLibrary the module, so we
+    // declare the import directly and return the raw handle.
+    [System.Runtime.InteropServices.LibraryImport(
+        "kernel32.dll",
+        EntryPoint = "GetModuleHandleW",
+        SetLastError = true,
+        StringMarshalling = System.Runtime.InteropServices.StringMarshalling.Utf16)]
+    private static partial nint GetModuleHandleW(string? lpModuleName);
 }
